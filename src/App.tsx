@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react"
+
 interface Movie {
   id: number
   title: string
@@ -7,40 +9,32 @@ interface Movie {
   watched: boolean
 }
 
-const sampleMovies: Movie[] = [
-  {
-    id: 1,
-    title: "The Shawshank Redemption",
-    year: 1994,
-    genre: "Drama",
-    rating: 5,
-    watched: true,
-  },
-  {
-    id: 2,
-    title: "Inception",
-    year: 2010,
-    genre: "Sci-Fi",
-    rating: 5,
-    watched: true,
-  },
-  {
-    id: 3,
-    title: "The Dark Knight",
-    year: 2008,
-    genre: "Action",
-    rating: 5,
-    watched: true,
-  },
-  {
-    id: 4,
-    title: "Dune: Part Two",
-    year: 2024,
-    genre: "Sci-Fi",
-    rating: 4,
-    watched: false,
-  },
+const STORAGE_KEY = "movie-collection"
+
+const GENRES = [
+  "Action",
+  "Comedy",
+  "Drama",
+  "Horror",
+  "Romance",
+  "Sci-Fi",
+  "Thriller",
+  "Documentary",
+  "Animation",
+  "Other",
 ]
+
+function loadMovies(): Movie[] {
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (stored) {
+    return JSON.parse(stored)
+  }
+  return []
+}
+
+function saveMovies(movies: Movie[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(movies))
+}
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -82,7 +76,192 @@ function MovieCard({ movie }: { movie: Movie }) {
   )
 }
 
+function StarRatingInput({
+  rating,
+  onChange,
+}: {
+  rating: number
+  onChange: (rating: number) => void
+}) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => onChange(star)}
+          className={`text-2xl transition-colors ${
+            star <= rating
+              ? "text-yellow-400 hover:text-yellow-500"
+              : "text-gray-300 hover:text-gray-400"
+          }`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) {
+  const [title, setTitle] = useState("")
+  const [year, setYear] = useState(new Date().getFullYear())
+  const [genre, setGenre] = useState(GENRES[0])
+  const [rating, setRating] = useState(3)
+  const [watched, setWatched] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) return
+
+    onAdd({
+      title: title.trim(),
+      year,
+      genre,
+      rating,
+      watched,
+    })
+
+    // Reset form
+    setTitle("")
+    setYear(new Date().getFullYear())
+    setGenre(GENRES[0])
+    setRating(3)
+    setWatched(false)
+    setIsOpen(false)
+  }
+
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className="w-full bg-white rounded-lg shadow-md p-5 border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 text-gray-500 hover:text-indigo-600"
+      >
+        <span className="text-2xl">+</span>
+        <span className="font-medium">Add Movie</span>
+      </button>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-lg shadow-md p-5 space-y-4"
+    >
+      <div>
+        <label
+          htmlFor="title"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Title *
+        </label>
+        <input
+          type="text"
+          id="title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          placeholder="Enter movie title"
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label
+            htmlFor="year"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Year
+          </label>
+          <input
+            type="number"
+            id="year"
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value) || 0)}
+            min="1888"
+            max={new Date().getFullYear() + 5}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="genre"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Genre
+          </label>
+          <select
+            id="genre"
+            value={genre}
+            onChange={(e) => setGenre(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            {GENRES.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Rating
+        </label>
+        <StarRatingInput rating={rating} onChange={setRating} />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="watched"
+          checked={watched}
+          onChange={(e) => setWatched(e.target.checked)}
+          className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+        />
+        <label htmlFor="watched" className="text-sm font-medium text-gray-700">
+          I've watched this movie
+        </label>
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <button
+          type="submit"
+          className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors font-medium"
+        >
+          Add Movie
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsOpen(false)}
+          className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-gray-700"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
+
 function App() {
+  const [movies, setMovies] = useState<Movie[]>(() => loadMovies())
+
+  useEffect(() => {
+    saveMovies(movies)
+  }, [movies])
+
+  const addMovie = (movieData: Omit<Movie, "id">) => {
+    const newMovie: Movie = {
+      ...movieData,
+      id: Date.now(),
+    }
+    setMovies([newMovie, ...movies])
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-indigo-600 text-white shadow-lg">
@@ -96,7 +275,8 @@ function App() {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {sampleMovies.map((movie) => (
+          <AddMovieForm onAdd={addMovie} />
+          {movies.map((movie) => (
             <MovieCard key={movie.id} movie={movie} />
           ))}
         </div>
