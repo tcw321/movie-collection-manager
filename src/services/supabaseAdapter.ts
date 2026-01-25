@@ -7,9 +7,11 @@ export function createSupabaseAdapter(): MovieStorage {
     throw new Error("Supabase client not initialized. Check your environment variables.")
   }
 
+  const client = supabase
+
   return {
     async getAll(): Promise<Movie[]> {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from("movies")
         .select("*")
         .order("created_at", { ascending: false })
@@ -29,7 +31,7 @@ export function createSupabaseAdapter(): MovieStorage {
     },
 
     async add(movieData: Omit<Movie, "id">): Promise<Movie> {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from("movies")
         .insert({
           title: movieData.title,
@@ -56,7 +58,7 @@ export function createSupabaseAdapter(): MovieStorage {
     },
 
     async update(id: string, updates: Partial<Omit<Movie, "id">>): Promise<Movie> {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from("movies")
         .update(updates)
         .eq("id", id)
@@ -78,7 +80,7 @@ export function createSupabaseAdapter(): MovieStorage {
     },
 
     async delete(id: string): Promise<void> {
-      const { error } = await supabase
+      const { error } = await client
         .from("movies")
         .delete()
         .eq("id", id)

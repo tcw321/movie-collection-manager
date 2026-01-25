@@ -4,20 +4,43 @@
 Add Supabase as a cloud storage backend, starting without authentication. This creates a foundation for adding user accounts later.
 
 ## Phases Overview
-1. **Now**: Abstract storage layer + add Supabase (no auth, public table)
-2. **Later**: Add Supabase Auth + per-user movie collections
+1. **Phase 1**: Abstract storage layer + add Supabase (no auth, public table) - **IN PROGRESS**
+2. **Phase 2**: Add Supabase Auth + per-user movie collections - **NOT STARTED**
+
+---
+
+## Progress Summary
+
+### Completed (2026-01-25)
+- [x] Step 1: Extract shared types (`src/types/movie.ts`)
+- [x] Step 2: Create storage interface (`src/services/storage.ts`)
+- [x] Step 3: Implement localStorage adapter (`src/services/localStorageAdapter.ts`)
+- [x] Step 4: Install Supabase client (`@supabase/supabase-js`)
+- [x] Step 5: Create Supabase project and `movies` table
+- [x] Step 6: Create Supabase client (`src/services/supabase.ts`)
+- [x] Step 7: Implement Supabase adapter (`src/services/supabaseAdapter.ts`)
+- [x] Step 8: Create storage hook (`src/hooks/useMovies.ts`)
+- [x] Step 9: Update App.tsx to use hook with loading/error states
+- [x] Step 10: Add environment configuration (`.env.example`, `src/vite-env.d.ts`)
+- [x] Fix: TypeScript types for Vite environment variables
+- [x] Fix: Year input field allowing clear and retype without leading zeros
+- [x] Fix: Test setup localStorage mock
+
+### Remaining Work
+- [ ] Fix tests to use localStorage instead of Supabase (tests currently fail because `.env` has Supabase configured)
+- [ ] Manually verify Supabase integration works in browser (`npm run dev`)
+- [ ] Test switching between localStorage and Supabase via env var
 
 ---
 
 ## Phase 1: Storage Abstraction + Supabase (No Auth)
 
-### Step 1: Extract shared types
-Create `src/types/movie.ts`:
-- Move `Movie` interface from App.tsx
-- Export for use across storage implementations
+### Step 1: Extract shared types ✅
+Created `src/types/movie.ts`:
+- Movie interface with `id` as `string` (for UUID compatibility)
 
-### Step 2: Create storage interface
-Create `src/services/storage.ts`:
+### Step 2: Create storage interface ✅
+Created `src/services/storage.ts`:
 ```typescript
 export interface MovieStorage {
   getAll(): Promise<Movie[]>
@@ -27,94 +50,114 @@ export interface MovieStorage {
 }
 ```
 
-### Step 3: Implement localStorage adapter
-Create `src/services/localStorageAdapter.ts`:
-- Wrap existing localStorage logic
-- Implement `MovieStorage` interface
-- Keep as fallback/offline option
+### Step 3: Implement localStorage adapter ✅
+Created `src/services/localStorageAdapter.ts`:
+- Implements `MovieStorage` interface
+- Uses `crypto.randomUUID()` for IDs
+- Keeps existing localStorage key `"movie-collection"`
 
-### Step 4: Install Supabase client
+### Step 4: Install Supabase client ✅
 ```bash
 npm install @supabase/supabase-js
 ```
 
-### Step 5: Create Supabase project (manual)
-User will:
-1. Create account at supabase.com
-2. Create new project
-3. Create `movies` table with schema:
-   - `id` (uuid, primary key, default: gen_random_uuid())
-   - `title` (text, not null)
-   - `year` (integer)
-   - `genre` (text)
-   - `rating` (integer)
-   - `watched` (boolean)
-   - `created_at` (timestamptz, default: now())
-4. Disable RLS or add policy allowing anonymous access
-5. Get project URL and anon key
+### Step 5: Create Supabase project ✅
+SQL used to create table:
+```sql
+CREATE TABLE movies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  year INTEGER,
+  genre TEXT,
+  rating INTEGER,
+  watched BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-### Step 6: Create Supabase client
-Create `src/services/supabase.ts`:
-- Initialize Supabase client with env vars
-- Export for use in adapter
+ALTER TABLE movies ENABLE ROW LEVEL SECURITY;
 
-### Step 7: Implement Supabase adapter
-Create `src/services/supabaseAdapter.ts`:
-- Implement `MovieStorage` interface
-- Use Supabase client for CRUD operations
-
-### Step 8: Create storage hook
-Create `src/hooks/useMovies.ts`:
-- Manages loading/error states
-- Uses selected storage adapter
-- Provides `movies`, `addMovie`, `updateMovie`, `deleteMovie`
-- Environment variable to switch between localStorage and Supabase
-
-### Step 9: Update App.tsx
-- Remove inline storage logic
-- Use `useMovies` hook
-- Handle loading and error states in UI
-
-### Step 10: Add environment configuration
-Create `.env.example`:
+CREATE POLICY "Allow anonymous access" ON movies
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 ```
+
+### Step 6: Create Supabase client ✅
+Created `src/services/supabase.ts`:
+- Reads credentials from `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+- Returns `null` if not configured (allows fallback to localStorage)
+
+### Step 7: Implement Supabase adapter ✅
+Created `src/services/supabaseAdapter.ts`:
+- Implements `MovieStorage` interface
+- Full CRUD operations via Supabase client
+
+### Step 8: Create storage hook ✅
+Created `src/hooks/useMovies.ts`:
+- Selects adapter based on `VITE_STORAGE_TYPE` env var
+- Manages `loading`, `error`, `movies` state
+- Provides `addMovie`, `updateMovie`, `deleteMovie`, `refresh`
+
+### Step 9: Update App.tsx ✅
+- Removed inline localStorage logic
+- Uses `useMovies` hook
+- Shows loading spinner and error messages
+
+### Step 10: Add environment configuration ✅
+Created `.env.example`:
+```
+VITE_STORAGE_TYPE=local
 VITE_SUPABASE_URL=your-project-url
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_STORAGE_TYPE=supabase  # or 'local'
 ```
 
----
-
-## Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `src/types/movie.ts` | Create - Movie type |
-| `src/services/storage.ts` | Create - Interface |
-| `src/services/localStorageAdapter.ts` | Create - localStorage impl |
-| `src/services/supabase.ts` | Create - Supabase client |
-| `src/services/supabaseAdapter.ts` | Create - Supabase impl |
-| `src/hooks/useMovies.ts` | Create - Storage hook |
-| `src/App.tsx` | Modify - Use hook |
-| `.env.example` | Create - Env template |
-| `.gitignore` | Modify - Add .env |
+Created `src/vite-env.d.ts` for TypeScript support.
 
 ---
 
-## Verification
+## Files Created/Modified
 
-1. Run `npm run dev` - app should work with localStorage (default)
-2. Set up Supabase project and add credentials to `.env`
-3. Change `VITE_STORAGE_TYPE=supabase`
-4. Add a movie - verify it appears in Supabase dashboard
-5. Refresh page - movie should persist from cloud
-6. Test with localStorage by changing env back
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/types/movie.ts` | ✅ Created | Movie type definition |
+| `src/services/storage.ts` | ✅ Created | Storage interface |
+| `src/services/localStorageAdapter.ts` | ✅ Created | localStorage implementation |
+| `src/services/supabase.ts` | ✅ Created | Supabase client initialization |
+| `src/services/supabaseAdapter.ts` | ✅ Created | Supabase implementation |
+| `src/hooks/useMovies.ts` | ✅ Created | React hook for movie operations |
+| `src/vite-env.d.ts` | ✅ Created | TypeScript env var types |
+| `src/App.tsx` | ✅ Modified | Uses useMovies hook |
+| `src/test/setup.ts` | ✅ Modified | Added localStorage mock |
+| `src/App.test.tsx` | ✅ Modified | Updated for async loading |
+| `.env.example` | ✅ Created | Environment template |
+| `.env` | ✅ Created | Local config (gitignored) |
+
+---
+
+## Known Issues
+
+### Tests fail with Supabase configured
+When `.env` has `VITE_STORAGE_TYPE=supabase`, tests fail because they try to make real network requests.
+
+**Fix needed:** Update `src/test/setup.ts` to force `VITE_STORAGE_TYPE=local` during tests.
+
+---
+
+## Verification Checklist
+
+- [ ] `npm run dev` works with localStorage (set `VITE_STORAGE_TYPE=local`)
+- [ ] `npm run dev` works with Supabase (set `VITE_STORAGE_TYPE=supabase`)
+- [ ] Adding a movie appears in Supabase dashboard
+- [ ] Refreshing page loads movies from Supabase
+- [ ] `npm test` passes
+- [ ] `npm run build` passes ✅
 
 ---
 
 ## Future: Phase 2 (Auth)
-After this works, adding auth involves:
+After Phase 1 is fully verified, adding auth involves:
 - Add `user_id` column to movies table
-- Enable RLS with policy: `user_id = auth.uid()`
-- Add Supabase Auth UI components
-- Update hook to handle auth state
+- Update RLS policy: `user_id = auth.uid()`
+- Add Supabase Auth UI components (login/signup)
+- Update `useMovies` hook to include user context
+- Handle auth state changes (login/logout)
