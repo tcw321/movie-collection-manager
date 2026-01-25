@@ -1,13 +1,5 @@
 import { useState, useEffect } from "react"
-
-interface Movie {
-  id: number
-  title: string
-  year: number
-  genre: string
-  rating: number
-  watched: boolean
-}
+import type { Movie } from "./types/movie"
 
 const STORAGE_KEY = "movie-collection"
 
@@ -105,7 +97,7 @@ function StarRatingInput({
 
 function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) {
   const [title, setTitle] = useState("")
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [year, setYear] = useState(String(new Date().getFullYear()))
   const [genre, setGenre] = useState(GENRES[0])
   const [rating, setRating] = useState(3)
   const [watched, setWatched] = useState(false)
@@ -117,7 +109,7 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
 
     onAdd({
       title: title.trim(),
-      year,
+      year: parseInt(year) || new Date().getFullYear(),
       genre,
       rating,
       watched,
@@ -125,7 +117,7 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
 
     // Reset form
     setTitle("")
-    setYear(new Date().getFullYear())
+    setYear(String(new Date().getFullYear()))
     setGenre(GENRES[0])
     setRating(3)
     setWatched(false)
@@ -179,7 +171,7 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
             type="number"
             id="year"
             value={year}
-            onChange={(e) => setYear(parseInt(e.target.value) || 0)}
+            onChange={(e) => setYear(e.target.value)}
             min="1888"
             max={new Date().getFullYear() + 5}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -257,7 +249,7 @@ function App() {
   const addMovie = (movieData: Omit<Movie, "id">) => {
     const newMovie: Movie = {
       ...movieData,
-      id: Date.now(),
+      id: crypto.randomUUID(),
     }
     setMovies([newMovie, ...movies])
   }
