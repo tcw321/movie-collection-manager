@@ -12,8 +12,8 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    // Click the "Add Movie" button to open the form
-    await user.click(screen.getByRole('button', { name: /add movie/i }))
+    // Wait for loading to complete, then click "Add Movie" button
+    await user.click(await screen.findByRole('button', { name: /add movie/i }))
 
     // Fill in the movie title
     const titleInput = screen.getByLabelText(/title/i)
@@ -30,8 +30,8 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    // Open the form
-    await user.click(screen.getByRole('button', { name: /add movie/i }))
+    // Wait for loading to complete, then open the form
+    await user.click(await screen.findByRole('button', { name: /add movie/i }))
 
     // Get the year input and clear it
     const yearInput = screen.getByLabelText(/year/i)

@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import type { Movie } from "./types/movie"
-
-const STORAGE_KEY = "movie-collection"
+import { useMovies } from "./hooks/useMovies"
 
 const GENRES = [
   "Action",
@@ -15,18 +14,6 @@ const GENRES = [
   "Animation",
   "Other",
 ]
-
-function loadMovies(): Movie[] {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored) {
-    return JSON.parse(stored)
-  }
-  return []
-}
-
-function saveMovies(movies: Movie[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(movies))
-}
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -240,19 +227,7 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
 }
 
 function App() {
-  const [movies, setMovies] = useState<Movie[]>(() => loadMovies())
-
-  useEffect(() => {
-    saveMovies(movies)
-  }, [movies])
-
-  const addMovie = (movieData: Omit<Movie, "id">) => {
-    const newMovie: Movie = {
-      ...movieData,
-      id: crypto.randomUUID(),
-    }
-    setMovies([newMovie, ...movies])
-  }
+  const { movies, loading, error, addMovie } = useMovies()
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -266,12 +241,22 @@ function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <AddMovieForm onAdd={addMovie} />
-          {movies.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} />
-          ))}
-        </div>
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-800 rounded-md">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center text-gray-500 py-12">Loading movies...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <AddMovieForm onAdd={addMovie} />
+            {movies.map((movie) => (
+              <MovieCard key={movie.id} movie={movie} />
+            ))}
+          </div>
+        )}
       </main>
     </div>
   )
