@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
 // Mock localStorage for jsdom
 const localStorageMock = (() => {
@@ -20,3 +21,6 @@ const localStorageMock = (() => {
 Object.defineProperty(globalThis, 'localStorage', {
   value: localStorageMock,
 })
+
+// Force localStorage storage type in tests to avoid Supabase network calls
+vi.stubEnv('VITE_STORAGE_TYPE', 'local')
