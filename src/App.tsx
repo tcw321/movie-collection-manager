@@ -1,15 +1,6 @@
-import { useState, useEffect } from "react"
-
-interface Movie {
-  id: number
-  title: string
-  year: number
-  genre: string
-  rating: number
-  watched: boolean
-}
-
-const STORAGE_KEY = "movie-collection"
+import { useState } from "react"
+import type { Movie } from "./types/movie"
+import { useMovies } from "./hooks/useMovies"
 
 const GENRES = [
   "Action",
@@ -23,18 +14,6 @@ const GENRES = [
   "Animation",
   "Other",
 ]
-
-function loadMovies(): Movie[] {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored) {
-    return JSON.parse(stored)
-  }
-  return []
-}
-
-function saveMovies(movies: Movie[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(movies))
-}
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -105,7 +84,7 @@ function StarRatingInput({
 
 function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) {
   const [title, setTitle] = useState("")
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [year, setYear] = useState(String(new Date().getFullYear()))
   const [genre, setGenre] = useState(GENRES[0])
   const [rating, setRating] = useState(3)
   const [watched, setWatched] = useState(false)
@@ -117,7 +96,7 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
 
     onAdd({
       title: title.trim(),
-      year,
+      year: parseInt(year) || new Date().getFullYear(),
       genre,
       rating,
       watched,
@@ -125,7 +104,7 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
 
     // Reset form
     setTitle("")
-    setYear(new Date().getFullYear())
+    setYear(String(new Date().getFullYear()))
     setGenre(GENRES[0])
     setRating(3)
     setWatched(false)
@@ -179,7 +158,7 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
             type="number"
             id="year"
             value={year}
-            onChange={(e) => setYear(parseInt(e.target.value) || 0)}
+            onChange={(e) => setYear(e.target.value)}
             min="1888"
             max={new Date().getFullYear() + 5}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -248,19 +227,7 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
 }
 
 function App() {
-  const [movies, setMovies] = useState<Movie[]>(() => loadMovies())
-
-  useEffect(() => {
-    saveMovies(movies)
-  }, [movies])
-
-  const addMovie = (movieData: Omit<Movie, "id">) => {
-    const newMovie: Movie = {
-      ...movieData,
-      id: Date.now(),
-    }
-    setMovies([newMovie, ...movies])
-  }
+  const { movies, loading, error, addMovie } = useMovies()
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -274,12 +241,22 @@ function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <AddMovieForm onAdd={addMovie} />
-          {movies.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} />
-          ))}
-        </div>
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-800 rounded-md">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center text-gray-500 py-12">Loading movies...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <AddMovieForm onAdd={addMovie} />
+            {movies.map((movie) => (
+              <MovieCard key={movie.id} movie={movie} />
+            ))}
+          </div>
+        )}
       </main>
     </div>
   )
