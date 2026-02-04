@@ -31,6 +31,11 @@ export function createSupabaseAdapter(): MovieStorage {
     },
 
     async add(movieData: Omit<Movie, "id">): Promise<Movie> {
+      const { data: { user } } = await client.auth.getUser()
+      if (!user) {
+        throw new Error("Must be authenticated to add movies")
+      }
+
       const { data, error } = await client
         .from("movies")
         .insert({
@@ -39,6 +44,7 @@ export function createSupabaseAdapter(): MovieStorage {
           genre: movieData.genre,
           rating: movieData.rating,
           watched: movieData.watched,
+          user_id: user.id,
         })
         .select()
         .single()

@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import type { Movie } from "../types/movie"
 import type { MovieStorage } from "../services/storage"
 import { createLocalStorageAdapter } from "../services/localStorageAdapter"
 import { createSupabaseAdapter } from "../services/supabaseAdapter"
 import { supabase } from "../services/supabase"
 
-function createStorage(): MovieStorage {
-  const storageType = import.meta.env.VITE_STORAGE_TYPE
+const isSupabaseMode = import.meta.env.VITE_STORAGE_TYPE === "supabase"
 
-  if (storageType === "supabase" && supabase) {
+function createStorage(): MovieStorage {
+  if (isSupabaseMode && supabase) {
     return createSupabaseAdapter()
   }
 
@@ -21,6 +21,7 @@ export function useMovies() {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const currentUserIdRef = useRef<string | null>(null)
 
   const loadMovies = useCallback(async () => {
     try {
@@ -36,7 +37,43 @@ export function useMovies() {
   }, [])
 
   useEffect(() => {
-    loadMovies()
+    // For localStorage mode, just load movies once
+    if (!isSupabaseMode || !supabase) {
+      loadMovies()
+      return
+    }
+
+    // For Supabase mode, wait for auth state then load
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        const newUserId = session?.user?.id ?? null
+
+        if (event === "SIGNED_OUT" || !newUserId) {
+          // Clear movies on logout
+          setMovies([])
+          setLoading(false)
+          currentUserIdRef.current = null
+        } else if (newUserId !== currentUserIdRef.current) {
+          // User changed (login or switch), reload movies
+          currentUserIdRef.current = newUserId
+          await loadMovies()
+        }
+      }
+    )
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      currentUserIdRef.current = session?.user?.id ?? null
+      if (session?.user) {
+        loadMovies()
+      } else {
+        setLoading(false)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [loadMovies])
 
   const addMovie = useCallback(async (movieData: Omit<Movie, "id">) => {
