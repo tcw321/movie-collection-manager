@@ -1,6 +1,10 @@
 import { useState } from "react"
 import type { Movie } from "./types/movie"
 import { useMovies } from "./hooks/useMovies"
+import { AuthGuard } from "./components/AuthGuard"
+import { UserMenu } from "./components/UserMenu"
+
+const isSupabaseMode = import.meta.env.VITE_STORAGE_TYPE === "supabase"
 
 const GENRES = [
   "Action",
@@ -226,17 +230,22 @@ function AddMovieForm({ onAdd }: { onAdd: (movie: Omit<Movie, "id">) => void }) 
   )
 }
 
-function App() {
+function AppContent() {
   const { movies, loading, error, addMovie } = useMovies()
 
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-indigo-600 text-white shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold">Movie Collection Manager</h1>
-          <p className="text-indigo-200 text-sm mt-1">
-            Track and manage your personal movie collection
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold">Movie Collection Manager</h1>
+              <p className="text-indigo-200 text-sm mt-1">
+                Track and manage your personal movie collection
+              </p>
+            </div>
+            {isSupabaseMode && <UserMenu />}
+          </div>
         </div>
       </header>
 
@@ -260,6 +269,18 @@ function App() {
       </main>
     </div>
   )
+}
+
+function App() {
+  if (isSupabaseMode) {
+    return (
+      <AuthGuard>
+        <AppContent />
+      </AuthGuard>
+    )
+  }
+
+  return <AppContent />
 }
 
 export default App
